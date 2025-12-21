@@ -17,7 +17,7 @@ const project = new Projalf({
 
     "@middy/core",
   ],
-  name: "dashboard-employee-bff",
+  name: "inspection-inspectors-bff",
   projenrcTs: true,
 
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
