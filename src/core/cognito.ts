@@ -14,7 +14,7 @@ import { env } from "./utils";
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 
-export async function createUser(
+export async function createInspector(
   email: string,
   firstName: string,
   lastName: string,
@@ -61,7 +61,7 @@ export async function createUser(
   );
 }
 
-export async function getUsers(groupName: string) {
+export async function getInspectors(groupName: string) {
   const response = await cognitoClient.send(
     new ListUsersInGroupCommand({
       GroupName: groupName,
@@ -84,7 +84,7 @@ export async function getUsers(groupName: string) {
   });
 }
 
-export async function deleteUser(username: string) {
+export async function deleteInspector(username: string) {
   const [{ UserAttributes }, { Groups }] = await Promise.all([
     cognitoClient.send(
       new AdminGetUserCommand({

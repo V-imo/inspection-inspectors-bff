@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { z } from "zod";
-import { createUser, deleteUser, getUsers } from "../../core/cognito";
+import { createInspector, deleteInspector, getInspectors } from "../../core/cognito";
 const RegisterInspectorSchema = z
   .object({
     email: z.email(),
@@ -76,10 +76,10 @@ export const route = new OpenAPIHono()
     async (c) => {
       const { email, firstName, lastName, currentAgency } = c.req.valid("json");
       try {
-        await createUser(email, firstName, lastName, currentAgency);
-        return c.json({ message: "User registered successfully" }, 201);
+        await createInspector(email, firstName, lastName, currentAgency);
+        return c.json({ message: "Inspector registered successfully" }, 201);
       } catch (error) {
-        console.error("Error registering user:", JSON.stringify(error));
+        console.error("Error registering inspector:", JSON.stringify(error));
         return c.json({ error: "Registration failed" }, 400);
       }
     }
@@ -116,7 +116,7 @@ export const route = new OpenAPIHono()
     async (c) => {
       const { agencyId } = c.req.valid("param");
       try {
-        const users = await getUsers(agencyId);
+        const users = await getInspectors(agencyId);
         console.log("Retrieved inspectors:", JSON.stringify(users));
         return c.json(z.array(InspectorSchema).parse(users), 200);
       } catch (error) {
@@ -157,7 +157,7 @@ export const route = new OpenAPIHono()
     async (c) => {
       const { username } = c.req.valid("param");
       try {
-        await deleteUser(username);
+        await deleteInspector(username);
         return c.json({ message: "Inspector deleted successfully" }, 200);
       } catch (error) {
         console.error("Error deleting inspector:", JSON.stringify(error));
