@@ -1,5 +1,5 @@
 {
-  "name": "dashboard-employee-bff",
+  "name": "dashboard-inspector-bff",
   "scripts": {
     "build": "npx projen build",
     "bundle": "npx projen bundle",

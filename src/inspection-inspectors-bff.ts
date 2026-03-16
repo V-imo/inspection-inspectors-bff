@@ -45,17 +45,17 @@ export class InspectionInspectorsBff extends cdk.Stack {
         ? cdk.RemovalPolicy.DESTROY
         : cdk.RemovalPolicy.RETAIN,
     });
-    const userPoolClient = userPool.addClient("UserPoolClient", {
+    const userPoolClient = userPool.addClient("InspectorPoolClient", {
       authFlows: { userPassword: true },
       preventUserExistenceErrors: true,
       generateSecret: true,
     });
-    new ssm.StringParameter(this, "UserPoolArnParameter", {
-      parameterName: `/vimo/${props.stage}/user-pool-arn`,
+    new ssm.StringParameter(this, "InspectorPoolArnParameter", {
+      parameterName: `/vimo/${props.stage}/inspector-pool-arn`,
       stringValue: userPool.userPoolArn,
     });
-    new ssm.StringParameter(this, "UserPoolClientIdParameter", {
-      parameterName: `/vimo/${props.stage}/user-pool-client-id`,
+    new ssm.StringParameter(this, "InspectorPoolClientIdParameter", {
+      parameterName: `/vimo/${props.stage}/inspector-pool-client-id`,
       stringValue: userPoolClient.userPoolClientId,
     });
     const apiFunction = new ln.NodejsFunction(this, "ApiFunction", {
