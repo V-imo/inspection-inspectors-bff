@@ -1,20 +1,23 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, RouteHandler } from "@hono/zod-openapi";
+import { $remove } from "dynamodb-toolbox";
 import { z } from "zod";
-import { createInspector, deleteInspector, getInspectors } from "../../core/cognito";
-const RegisterInspectorSchema = z
+import { Inspector } from "../../core/inspector";
+import { logger } from "../../core/utils";
+
+const RegisterUserSchema = z
   .object({
     email: z.email(),
     firstName: z.string(),
     lastName: z.string(),
-    currentAgency: z.string(),
+    agencyId: z.string(),
   })
-  .openapi("RegisterInspector");
+  .openapi("RegisterUser");
 
-const RegisterInspectorResponseSchema = z
+const RegisterUserResponseSchema = z
   .object({
     message: z.string(),
   })
-  .openapi("RegisterInspectorResponse");
+  .openapi("RegisterUserResponse");
 
 const ErrorResponseSchema = z
   .object({
@@ -22,146 +25,163 @@ const ErrorResponseSchema = z
   })
   .openapi("ErrorResponse");
 
-const InspectorSchema = z
+const UserSchema = z
   .object({
     username: z.string(),
-    email: z.string().optional(),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
+    email: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    agencyId: z.string(),
   })
-  .openapi("Inspector");
+  .openapi("User");
+
+const DeleteUserParamsSchema = z.object({
+  agencyId: z.string(),
+  email: z.email(),
+});
+
+const registerUserRoute = createRoute({
+  method: "post",
+  path: "/",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: RegisterUserSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    202: {
+      content: {
+        "application/json": {
+          schema: RegisterUserResponseSchema,
+        },
+      },
+      description: "User stored successfully",
+    },
+    400: {
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+      description: "Invalid request",
+    },
+  },
+  description: "Store inspector in projection table",
+});
+
+const registerUserHandler: RouteHandler<typeof registerUserRoute> = async (
+  c,
+) => {
+  const { email, firstName, lastName, agencyId } = c.req.valid("json");
+
+  try {
+    await Inspector.update({
+      agencyId,
+      email,
+      firstname: firstName,
+      lastname: lastName,
+      oplock: Date.now(),
+      latched: false,
+      deleted: false,
+      ttl: $remove(),
+    });
+
+    return c.json({ message: "User stored successfully" }, 202);
+  } catch (error) {
+    logger.error("Error storing Inspector", { error });
+    return c.json({ error: "Invalid request" }, 400);
+  }
+};
+
+const getUsersRoute = createRoute({
+  method: "get",
+  path: "/{agencyId}",
+  request: {
+    params: z.object({
+      agencyId: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.array(UserSchema),
+        },
+      },
+      description: "Users retrieved successfully",
+    },
+    404: {
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+      description: "Group not found",
+    },
+  },
+  description: "Get inspectors by agency from projection table",
+});
+
+const getUsersHandler: RouteHandler<typeof getUsersRoute> = async (c) => {
+  const { agencyId } = c.req.valid("param");
+  const users = await Inspector.listByAgency(agencyId);
+
+  const response = users.map((user) => ({
+    username: user.email,
+    email: user.email,
+    firstName: user.firstname,
+    lastName: user.lastname,
+    agencyId: user.agencyId,
+  }));
+
+  return c.json(z.array(UserSchema).parse(response), 200);
+};
+
+const deleteUserRoute = createRoute({
+  method: "delete",
+  path: "/{agencyId}/{email}",
+  request: {
+    params: DeleteUserParamsSchema,
+  },
+  responses: {
+    202: {
+      content: {
+        "application/json": {
+          schema: RegisterUserResponseSchema,
+        },
+      },
+      description: "Inspector marked as deleted",
+    },
+    400: {
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+      description: "Invalid request",
+    },
+  },
+  description: "Soft delete inspector in projection table",
+});
+
+const deleteUserHandler: RouteHandler<typeof deleteUserRoute> = async (c) => {
+  const { agencyId, email } = c.req.valid("param");
+
+  try {
+    await Inspector.del(agencyId, email);
+
+    return c.json({ message: "Inspector marked as deleted" }, 202);
+  } catch (error) {
+    logger.error("Error soft deleting inspector", { error });
+    return c.json({ error: "Invalid request" }, 400);
+  }
+};
 
 export const route = new OpenAPIHono()
-  .openapi(
-    createRoute({
-      method: "post",
-      path: "/",
-      request: {
-        body: {
-          content: {
-            "application/json": {
-              schema: RegisterInspectorSchema,
-            },
-          },
-        },
-      },
-      responses: {
-        201: {
-          content: {
-            "application/json": {
-              schema: RegisterInspectorResponseSchema,
-            },
-          },
-          description: "Inspector registered successfully",
-        },
-        400: {
-          content: {
-            "application/json": {
-              schema: ErrorResponseSchema,
-            },
-          },
-          description: "Registration failed",
-        },
-        500: {
-          content: {
-            "application/json": {
-              schema: ErrorResponseSchema,
-            },
-          },
-          description: "Server error",
-        },
-      },
-      description: "Register a new user",
-    }),
-    async (c) => {
-      const { email, firstName, lastName, currentAgency } = c.req.valid("json");
-      try {
-        await createInspector(email, firstName, lastName, currentAgency);
-        return c.json({ message: "Inspector registered successfully" }, 201);
-      } catch (error) {
-        console.error("Error registering inspector:", JSON.stringify(error));
-        return c.json({ error: "Registration failed" }, 400);
-      }
-    }
-  )
-  .openapi(
-    createRoute({
-      method: "get",
-      path: "/{agencyId}",
-      request: {
-        params: z.object({
-          agencyId: z.string(),
-        }),
-      },
-      responses: {
-        200: {
-          content: {
-            "application/json": {
-              schema: z.array(InspectorSchema),
-            },
-          },
-          description: "Inspectors retrieved successfully",
-        },
-        404: {
-          content: {
-            "application/json": {
-              schema: ErrorResponseSchema,
-            },
-          },
-          description: "Group not found",
-        },
-      },
-      description: "Get users from a group",
-    }),
-    async (c) => {
-      const { agencyId } = c.req.valid("param");
-      try {
-        const users = await getInspectors(agencyId);
-        console.log("Retrieved inspectors:", JSON.stringify(users));
-        return c.json(z.array(InspectorSchema).parse(users), 200);
-      } catch (error) {
-        console.error("Error retrieving inspectors:", JSON.stringify(error));
-        return c.json({ error: "Group not found" }, 404);
-      }
-    }
-  )
-  .openapi(
-    createRoute({
-      method: "delete",
-      path: "/{username}",
-      request: {
-        params: z.object({
-          username: z.string(),
-        }),
-      },
-      responses: {
-        200: {
-          content: {
-            "application/json": {
-              schema: RegisterInspectorResponseSchema,
-            },
-          },
-          description: "Inspector deleted successfully",
-        },
-        404: {
-          content: {
-            "application/json": {
-              schema: ErrorResponseSchema,
-            },
-          },
-          description: "Inspector not found",
-        },
-      },
-      description: "Delete an inspector",
-    }),
-    async (c) => {
-      const { username } = c.req.valid("param");
-      try {
-        await deleteInspector(username);
-        return c.json({ message: "Inspector deleted successfully" }, 200);
-      } catch (error) {
-        console.error("Error deleting inspector:", JSON.stringify(error));
-        return c.json({ error: "Inspector not found" }, 404);
-      }
-    }
-  );
+  .openapi(registerUserRoute, registerUserHandler)
+  .openapi(getUsersRoute, getUsersHandler)
+  .openapi(deleteUserRoute, deleteUserHandler);
