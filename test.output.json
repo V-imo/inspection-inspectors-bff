@@ -1,1 +1,9 @@
-{}
+{
+  "test-inspection-inspectors-bff": {
+    "EventBusName": "testinspectioninspectorsbffEventBus5A200AA6",
+    "UserPoolClientId": "2aqom38neokg2q7eq9rnbpej5s",
+    "UserPoolId": "eu-north-1_dus6IwzWN",
+    "ApiUrl": "https://ag1wll8uhf.execute-api.eu-north-1.amazonaws.com/",
+    "ServerlessSpyWsUrl": "a3ksyngqjdf8yd-ats.iot.eu-north-1.amazonaws.com/TestInspectionInspectorsBff"
+  }
+}

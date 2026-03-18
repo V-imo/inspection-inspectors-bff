@@ -1,7 +1,7 @@
 /* eslint-disable */
 export class ServerlessSpyEvents {
   EventBridgeEventBus: 'EventBridge#EventBus' = 'EventBridge#EventBus';
-  DynamoDBDashboardEmployeeBffTable: 'DynamoDB#DashboardEmployeeBffTable' = 'DynamoDB#DashboardEmployeeBffTable';
+  DynamoDBInspectorsBffTable: 'DynamoDB#InspectorsBffTable' = 'DynamoDB#InspectorsBffTable';
   FunctionListenerRequest: 'Function#Listener#Request' = 'Function#Listener#Request';
   FunctionListenerError: 'Function#Listener#Error' = 'Function#Listener#Error';
   FunctionListenerConsole: 'Function#Listener#Console' = 'Function#Listener#Console';

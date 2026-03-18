@@ -121,6 +121,7 @@ export class InspectionInspectorsBff extends cdk.Stack {
       environment: {
         STAGE: props.stage,
         SERVICE: props.serviceName,
+        TABLE_NAME: table.tableName,
         NODE_OPTIONS: "--enable-source-maps",
       },
       bundling: { minify: true, sourceMap: true },
